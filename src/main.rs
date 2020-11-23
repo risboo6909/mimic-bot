@@ -28,7 +28,8 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
 
     // try to read data for the given chat_id
     if let Err(err) = brain.read_from_redis(chat_id).await {
-        api.send(message.text_reply(format!("Error loading chat data, reason: {}", err))).await?;
+        api.send(message.text_reply(format!("Error loading chat data, reason: {}", err)))
+            .await?;
     };
 
     if let MessageKind::Text { ref data, .. } = message.kind {
@@ -117,15 +118,14 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
                     .await?;
             }
         } else if !data.is_empty() {
-            let full_name = UserName(full_name(&message.from.first_name, message.from.last_name.clone()));
+            let full_name = UserName(full_name(
+                &message.from.first_name,
+                message.from.last_name.clone(),
+            ));
 
-            if !brain.is_known_user(chat_id, &full_name) {
-                return Ok(());
+            if brain.is_known_user(chat_id, &full_name) {
+                brain.feed_message(chat_id, full_name, data, true).await;
             }
-
-            brain
-                .feed_message(chat_id, full_name, data, true)
-                .await;
 
             let now = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)

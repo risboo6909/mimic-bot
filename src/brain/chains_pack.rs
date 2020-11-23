@@ -76,7 +76,7 @@ impl Chains {
             .map(|s| {
                 s.trim()
                     .to_lowercase()
-                    .replace(&['\"', ';', ':', '\''][..], "")
+                    .replace(&['\"', ';', ':', '\''][..], " ")
             })
             .collect::<Vec<String>>()
     }

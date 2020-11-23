@@ -5,14 +5,14 @@ const REDIS_ADDR: &str = "redis://127.0.0.1/";
 // don't reply to message older than REPLY_TIMEOUT_DEFAULT_SEC seconds
 const REPLY_TIMEOUT_DEFAULT_SEC: &str = "5";
 // probability to reply to any message
-const REPLY_PROB_DEFAULT: &str = "0.05";
+const REPLY_PROB_DEFAULT: &str = "0.01";
 // probability to reply to message ending with known word
 const KNOWN_WORD_REPLY_PROB: &str = "0.1";
 
 // maximum number of attempts to generate uniqe and appropriate reply
 const MAX_GEN_RETRIES: &str = "100";
 // basically, the maximum number of words in a generated sentence
-const MAX_REPLY_TOKENS: &str = "20";
+const MAX_REPLY_TOKENS: &str = "15";
 // how often to dump database into Redis (every 10 new messages by default)
 const WRITE_TO_REDIS_FREQ: &str = "10";
 
@@ -33,7 +33,6 @@ pub(crate) struct Config {
 impl Config {
     pub(crate) fn new() -> Self {
         Config {
-
             redis_addr: env::var("REDIS_ADDR").unwrap_or_else(|_| REDIS_ADDR.to_owned()),
 
             reply_timeout_sec: env::var("REPLY_TIMEOUT_SEC")
