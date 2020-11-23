@@ -1,0 +1,23 @@
+[package]
+name = "mimic-bot"
+version = "0.1.0"
+authors = ["Boris Tatarintsev <ttyv00@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+markov = "1.1.0"
+tokio = { version = "0.2.22", features = ["rt-core", "macros"] }
+log = "0.4.11"
+pretty_env_logger = "0.4.0"
+telegram-bot = "0.7.0"
+futures = "0.3.7"
+telegram-bot-raw = "0.7.0"
+serde = "1.0.117"
+serde_yaml = "0.8"
+reqwest = { version = "0.10.8", features = ["json"] }
+rand = "0.7.3"
+redis = { version = "0.17.0", features = ["tokio-comp"] }
+lazy_static = "1.4.0"
+anyhow = "1.0.34"
