@@ -163,7 +163,6 @@ impl Brain {
         msg: &str,
         write_to_redis: bool,
     ) {
-
         let chains = self.insert_new_chat_id_user(chat_id, &name);
         chains.feed(msg);
 
@@ -187,7 +186,6 @@ impl Brain {
 
         for item in input.messages {
             if let Some(name) = item.from {
-
                 if let Some(ref tmp) = req_name {
                     if *tmp != UserName(name.clone()) {
                         continue;
@@ -208,10 +206,7 @@ impl Brain {
 
         // save to Redis
         match req_name {
-            Some(name) => {
-                self.write_to_redis(chat_id, name)
-                    .await?
-            }
+            Some(name) => self.write_to_redis(chat_id, name).await?,
             None => {
                 for name in names {
                     self.write_to_redis(chat_id, UserName(name)).await?;

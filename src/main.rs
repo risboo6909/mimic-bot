@@ -37,17 +37,22 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
 
         if msg_text.starts_with("/learn") {
             let parts = msg_text.splitn(2, "/learn ").collect::<Vec<&str>>();
-
+            
             if parts.len() < 2 {
-                api.send(message.text_reply("Wrong syntax, use '/learn url_to_json' [name]"))
+                api.send(message.text_reply("Wrong syntax, use '/learn url_to_json user_name"))
                     .await?;
-                // we don't care of that error anymore
+                // we don't care of this error anymore
                 return Ok(());
             }
 
             let (uri, one_user) = match parts[1].trim().split_once(" ") {
                 Some((uri, one_user)) => (uri, Some(UserName(one_user.to_owned()))),
-                None => (parts[1], None),
+                None =>  {
+                    api.send(message.text_reply("User name must be provided"))
+                    .await?;
+                    // we don't care of this error anymore
+                    return Ok(());
+                },
             };
 
             let uri: Url = match uri.trim().parse() {
