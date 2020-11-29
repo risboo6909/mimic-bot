@@ -1,6 +1,6 @@
 use std::env;
 
-const REDIS_ADDR: &str = "redis://127.0.0.1/";
+const REDIS_ADDR: &str = "redis://127.0.0.1:5000/";
 
 // don't reply to message older than REPLY_TIMEOUT_DEFAULT_SEC seconds
 const REPLY_TIMEOUT_DEFAULT_SEC: &str = "5";

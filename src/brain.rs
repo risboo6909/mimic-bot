@@ -11,6 +11,7 @@ use std::fmt::{self, Display, Formatter};
 
 use super::CONFIG;
 
+#[allow(clippy::derive_hash_xor_eq)]
 #[derive(Eq, Hash, Clone, Debug)]
 pub(crate) struct UserName(pub(crate) String);
 
@@ -66,7 +67,7 @@ impl Brain {
     /// and false otherwise
     pub(crate) fn is_known_user(&self, chat_id: ChatId, user_name: &UserName) -> bool {
         if let Some(chat_users) = &self.users.get(&chat_id) {
-            if let Some(_) = chat_users.get(&user_name) {
+            if chat_users.get(&user_name).is_some() {
                 return true;
             }
         }

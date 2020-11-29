@@ -6,7 +6,7 @@ mod config;
 use futures::StreamExt;
 use rand::Rng;
 use reqwest::{redirect::Policy, Url};
-use std::time::SystemTime;
+use std::{thread, time, time::SystemTime};
 use telegram_bot::*;
 
 use brain::{Brain, UserName};
@@ -15,6 +15,8 @@ use config::Config;
 lazy_static::lazy_static! {
     static ref CONFIG: Config = Config::new();
 }
+
+const REDIS_RETRY_DELAY: time::Duration = time::Duration::from_millis(5000);
 
 fn full_name(first_name: &str, last_name: Option<String>) -> String {
     match last_name {
@@ -37,7 +39,7 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
 
         if msg_text.starts_with("/learn") {
             let parts = msg_text.splitn(2, "/learn ").collect::<Vec<&str>>();
-            
+
             if parts.len() < 2 {
                 api.send(message.text_reply("Wrong syntax, use '/learn url_to_json user_name"))
                     .await?;
@@ -47,12 +49,12 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
 
             let (uri, one_user) = match parts[1].trim().split_once(" ") {
                 Some((uri, one_user)) => (uri, Some(UserName(one_user.to_owned()))),
-                None =>  {
+                None => {
                     api.send(message.text_reply("User name must be provided"))
-                    .await?;
+                        .await?;
                     // we don't care of this error anymore
                     return Ok(());
-                },
+                }
             };
 
             let uri: Url = match uri.trim().parse() {
@@ -163,23 +165,59 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
     Ok(())
 }
 
+fn try_open_connection(try_no: usize) -> redis::RedisResult<redis::Client> {
+    let client = redis::Client::open(CONFIG.redis_addr.clone());
+
+    if let Err(ref err) = client {
+        if try_no > 0 {
+            log::error!("error connecting to Redis: {}, retry in 5 seconds...", err);
+            thread::sleep(REDIS_RETRY_DELAY);
+
+            return try_open_connection(try_no - 1);
+        }
+    }
+
+    client
+}
+
+async fn try_get_connection(
+    client: &redis::Client,
+    mut try_no: usize,
+) -> redis::RedisResult<redis::aio::Connection> {
+    loop {
+        let con = client.get_async_connection().await;
+
+        if let Err(ref err) = con {
+            try_no -= 1;
+            if try_no == 0 {
+                return con;
+            }
+
+            log::error!("error connecting to Redis: {}, retry in 5 seconds...", err);
+            thread::sleep(REDIS_RETRY_DELAY);
+        } else {
+            return con;
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     pretty_env_logger::init();
 
     let api = Api::new(&CONFIG.telegram_bot_token);
 
-    let client = match redis::Client::open(CONFIG.redis_addr.clone()) {
-        Ok(client) => client,
-        Err(err) => panic!("error creating Redis client: {}", err),
+    let client = try_open_connection(5);
+    if let Err(err) = client {
+        panic!("error creating Redis client: {}", err);
     };
 
-    let con = match client.get_async_connection().await {
-        Ok(con) => con,
-        Err(err) => panic!("error connecting to Redis: {}", err),
-    };
+    let con = try_get_connection(&client.unwrap(), 5).await;
+    if let Err(err) = con {
+        panic!("error connecting to Redis: {}", err);
+    }
 
-    let mut brain = Brain::new(1, 3).set_redis_con(con);
+    let mut brain = Brain::new(1, 3).set_redis_con(con.unwrap());
 
     // Fetch new updates via long poll method
     let mut stream = api.stream();
