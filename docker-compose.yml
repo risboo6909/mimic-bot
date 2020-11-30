@@ -1,0 +1,32 @@
+version: "3.2"
+
+services:
+
+  redis:
+
+    image: "redis:alpine"
+
+    command: 
+      - 'redis-server'
+      - '--save 900 1'
+      - '--save 300 10'
+      - '--save 60 10000'
+      - '--port 5000'
+
+    ports:
+      - "5000:5000"
+
+    volumes:
+      - $PWD/redis-data:/var/lib/redis
+      - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
+
+    environment:
+      - REDIS_REPLICATION_MODE=master
+  
+  mimic-bot:
+    
+    environment:
+      - TELEGRAM_BOT_TOKEN=
+      - REDIS_ADDR=redis://redis:5000
+
+    image: "risboo6909/mimic-bot"
