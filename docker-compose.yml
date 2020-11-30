@@ -12,16 +12,13 @@ services:
       - '--save 300 10'
       - '--save 60 10000'
       - '--port 5000'
+      - '--appendonly yes'
 
     ports:
       - "5000:5000"
 
     volumes:
-      - $PWD/redis-data:/var/lib/redis
-      - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
-
-    environment:
-      - REDIS_REPLICATION_MODE=master
+      - ./redis-data:/data
   
   mimic-bot:
     
