@@ -18,6 +18,7 @@ const WRITE_TO_REDIS_FREQ: &str = "10";
 
 pub(crate) struct Config {
     pub(crate) redis_addr: String,
+    pub(crate) redis_passwd: Option<String>,
 
     pub(crate) reply_timeout_sec: u64,
     pub(crate) reply_prob: f64,
@@ -34,6 +35,7 @@ impl Config {
     pub(crate) fn new() -> Self {
         Config {
             redis_addr: env::var("REDIS_ADDR").unwrap_or_else(|_| REDIS_ADDR.to_owned()),
+            redis_passwd: env::var("REDIS_PASSWD").ok(),
 
             reply_timeout_sec: env::var("REPLY_TIMEOUT_SEC")
                 .unwrap_or_else(|_| REPLY_TIMEOUT_DEFAULT_SEC.to_owned())

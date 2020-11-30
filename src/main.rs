@@ -17,6 +17,7 @@ lazy_static::lazy_static! {
 }
 
 const REDIS_RETRY_DELAY: time::Duration = time::Duration::from_millis(5000);
+const REDIS_RETRY_ATTEMPTS: usize = 5;
 
 fn full_name(first_name: &str, last_name: Option<String>) -> String {
     match last_name {
@@ -112,7 +113,7 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
         } else if msg_text.starts_with("/say") {
             let parts = msg_text.split("/say ").collect::<Vec<&str>>();
             if parts.len() < 2 {
-                api.send(message.text_reply("Wrong syntax, use '/say order (from 1 to 3)'"))
+                api.send(message.text_reply("Wrong syntax, use '/say order (from 1 to 2)'"))
                     .await?;
                 // we don't care of that error anymore
                 return Ok(());
@@ -165,21 +166,6 @@ async fn handle_messages(api: Api, brain: &mut Brain, message: Message) -> Resul
     Ok(())
 }
 
-fn try_open_connection(try_no: usize) -> redis::RedisResult<redis::Client> {
-    let client = redis::Client::open(CONFIG.redis_addr.clone());
-
-    if let Err(ref err) = client {
-        if try_no > 0 {
-            log::error!("error connecting to Redis: {}, retry in 5 seconds...", err);
-            thread::sleep(REDIS_RETRY_DELAY);
-
-            return try_open_connection(try_no - 1);
-        }
-    }
-
-    client
-}
-
 async fn try_get_connection(
     client: &redis::Client,
     mut try_no: usize,
@@ -207,17 +193,28 @@ async fn main() -> Result<(), Error> {
 
     let api = Api::new(&CONFIG.telegram_bot_token);
 
-    let client = try_open_connection(5);
-    if let Err(err) = client {
-        panic!("error creating Redis client: {}", err);
+    let redis_url = redis::parse_redis_url(&CONFIG.redis_addr).expect("unable to parse Redis url");
+    let redis_conn_info = redis::ConnectionInfo {
+        addr: Box::new(redis::ConnectionAddr::Tcp(
+            redis_url.host().unwrap().to_string(),
+            redis_url.port().unwrap(),
+        )),
+        db: 0,
+        username: None,
+        passwd: CONFIG.redis_passwd.clone(),
     };
 
-    let con = try_get_connection(&client.unwrap(), 5).await;
+    let client = redis::Client::open(redis_conn_info);
+    if let Err(ref err) = client {
+        panic!("error opening Redis connection: {}", err);
+    }
+
+    let con = try_get_connection(&client.unwrap(), REDIS_RETRY_ATTEMPTS).await;
     if let Err(err) = con {
         panic!("error connecting to Redis: {}", err);
     }
 
-    let mut brain = Brain::new(1, 3).set_redis_con(con.unwrap());
+    let mut brain = Brain::new(1, 2).set_redis_con(con.unwrap());
 
     // Fetch new updates via long poll method
     let mut stream = api.stream();
