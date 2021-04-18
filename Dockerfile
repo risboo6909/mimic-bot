@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly-slim
+FROM rustlang/rust:nightly-slim as builder
 
 # update and install required packages
 RUN apt-get update
@@ -22,5 +22,15 @@ RUN touch src/main.rs
 # build project
 RUN cargo build --release
 
+# multistage container
+# use debian slim image for runtime
+
+FROM debian:buster-slim as runtime
+RUN apt-get update \
+    && apt-get install -y libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR app
+COPY --from=builder /mimic-bot/target/release/mimic-bot .
+
 # run project
-CMD ["target/release/mimic-bot"]
+CMD ["./mimic-bot"]
