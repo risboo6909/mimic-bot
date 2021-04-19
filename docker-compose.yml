@@ -26,4 +26,5 @@ services:
       - TELEGRAM_BOT_TOKEN=
       - REDIS_ADDR=redis://redis:5000
 
-    image: "risboo6909/mimic-bot"
+    build: "."
+    restart: unless-stopped

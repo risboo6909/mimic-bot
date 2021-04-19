@@ -27,7 +27,8 @@ RUN cargo build --release
 
 FROM debian:buster-slim as runtime
 RUN apt-get update \
-    && apt-get install -y libssl-dev \
+    && apt-get install -y libssl-dev ca-certificates\
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR app
 COPY --from=builder /mimic-bot/target/release/mimic-bot .
